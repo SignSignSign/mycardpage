@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)" />
+    <meta name="description" content="个人数字名片 · Personal Digital Card" />
+    <title>数字名片 · My Digital Card</title>
+
+    <!-- ===== Tailwind CSS（CDN，首次加载需要联网） ===== -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- ===== 二维码已替换为用户自定义图片，不再需要 QRCode.js ===== -->
+
+    <!-- ===== Tailwind 自定义配置：扩展主题色、深色模式 class 策略 ===== -->
+    <script>
+        tailwind.config = {
+            darkMode: 'class',           // 使用 class 切换深色模式
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0efff',
+                            200: '#bae0ff',
+                            300: '#7cc6ff',
+                            400: '#3aa6ff',
+                            500: '#1689ff',   // 主品牌色
+                            600: '#0a6ce6',
+                            700: '#0b56b8',
+                            800: '#0f4992',
+                            900: '#123d76',
+                        },
+                    },
+                    fontFamily: {
+                        sans: ['"PingFang SC"', '"Microsoft YaHei"', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
+                    },
+                    keyframes: {
+                        fadeUp: {
+                            '0%': { opacity: '0', transform: 'translateY(16px)' },
+                            '100%': { opacity: '1', transform: 'translateY(0)' },
+                        },
+                        floatSoft: {
+                            '0%, 100%': { transform: 'translateY(0)' },
+                            '50%': { transform: 'translateY(-6px)' },
+                        },
+                        shimmer: {
+                            '0%': { backgroundPosition: '-200% 0' },
+                            '100%': { backgroundPosition: '200% 0' },
+                        },
+                        pop: {
+                            '0%': { opacity: '0', transform: 'scale(0.92)' },
+                            '100%': { opacity: '1', transform: 'scale(1)' },
+                        },
+                    },
+                    animation: {
+                        'fade-up': 'fadeUp .6s ease-out both',
+                        'float-soft': 'floatSoft 4s ease-in-out infinite',
+                        'shimmer': 'shimmer 2.4s linear infinite',
+                        'pop': 'pop .4s ease-out both',
+                    },
+                },
+            },
+        }
+    </script>
+
+    <!-- ===== 自定义样式：渐变背景、玻璃卡片、无障碍 ===== -->
+    <style>
+        /* 柔和渐变背景（浅色/深色自适应） */
+        body {
+            background:
+                radial-gradient(1200px 600px at 10% -10%, rgba(22, 137, 255, 0.18), transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, rgba(168, 85, 247, 0.14), transparent 60%),
+                linear-gradient(180deg, #f8fafc 0%, #eef2ff 100%);
+            background-attachment: fixed;
+        }
+
+        .dark body {
+            background:
+                radial-gradient(1200px 600px at 10% -10%, rgba(22, 137, 255, 0.25), transparent 60%),
+                radial-gradient(900px 500px at 110% 10%, rgba(168, 85, 247, 0.20), transparent 60%),
+                linear-gradient(180deg, #0b1220 0%, #0f172a 100%);
+        }
+
+        /* 玻璃拟态卡片 */
+        .glass {
+            backdrop-filter: blur(18px) saturate(140%);
+            -webkit-backdrop-filter: blur(18px) saturate(140%);
+        }
+
+        /* 技能标签的彩色渐变文字 */
+        .gradient-text {
+            background: linear-gradient(135deg, #1689ff 0%, #a855f7 100%);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Toast 提示 */
+        .toast {
+            pointer-events: none;
+            opacity: 0;
+            transform: translateY(12px);
+            transition: opacity .25s ease, transform .25s ease;
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* 尊重用户的减少动画偏好 */
+        @media (prefers-reduced-motion: reduce) {
+
+            *,
+            *::before,
+            *::after {
+                animation-duration: 0.001ms !important;
+                animation-iteration-count: 1 !important;
+                transition-duration: 0.001ms !important;
+            }
+        }
+
+        /* 焦点可见性（键盘无障碍） */
+        :focus-visible {
+            outline: 2px solid #1689ff;
+            outline-offset: 2px;
+            border-radius: 6px;
+        }
+
+        /* 滚动条美化（Webkit） */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: rgba(148, 163, 184, .45);
+            border-radius: 8px;
+        }
+
+        .dark ::-webkit-scrollbar-thumb {
+            background: rgba(71, 85, 105, .6);
+        }
+    </style>
+</head>
+
+<!-- ============================================================
+     BODY：默认跟随系统主题，由 JS 在加载时给 <html> 加 .dark
+     ============================================================ -->
+
+<body class="font-sans text-slate-800 dark:text-slate-100 min-h-screen">
+
+    <!-- ==================== 顶部浮动：主题切换按钮 ==================== -->
+    <button id="themeToggle" aria-label="切换深色浅色主题" class="fixed top-4 right-4 z-40 w-11 h-11 rounded-full
+           glass bg-white/60 dark:bg-slate-800/60
+           shadow-lg shadow-slate-900/5 ring-1 ring-slate-200/70 dark:ring-slate-700/70
+           flex items-center justify-center
+           hover:scale-105 active:scale-95
+           transition-transform duration-200">
+        <!-- 太阳图标（浅色模式可见） -->
+        <svg id="iconSun" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-amber-500 dark:hidden">
+            <circle cx="12" cy="12" r="4" />
+            <path
+                d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.41-1.41M17.66 6.34l1.41-1.41" />
+        </svg>
+        <!-- 月亮图标（深色模式可见） -->
+        <svg id="iconMoon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+            class="w-5 h-5 text-indigo-300 hidden dark:block">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+        </svg>
+    </button>
+
+    <!-- ==================== 主体容器 ==================== -->
+    <main class="max-w-xl mx-auto px-5 py-10 sm:py-14 animate-fade-up">
+
+        <!-- ============ 名片主卡片 ============ -->
+        <section class="glass rounded-3xl
+             bg-white/70 dark:bg-slate-800/50
+             ring-1 ring-slate-200/70 dark:ring-slate-700/60
+             shadow-2xl shadow-slate-900/5
+             p-7 sm:p-9">
+            <!-- 头像 + 基本信息 -->
+            <div class="flex flex-col sm:flex-row sm:items-center gap-6">
+                <!-- 头像 -->
+                <div class="relative shrink-0 mx-auto sm:mx-0">
+                    <div
+                        class="absolute inset-0 rounded-full bg-gradient-to-br from-brand-400 to-purple-500 blur-xl opacity-40 animate-float-soft">
+                    </div>
+                    <div
+                        class="relative w-28 h-28 rounded-full overflow-hidden ring-4 ring-white dark:ring-slate-700 shadow-lg">
+                        <img src="https://api.dicebear.com/7.x/adventurer/svg?seed=Felix&backgroundColor=c0aede,b6e3f4,d1d4f9,ffd5dc"
+                            alt="个人头像" class="w-full h-full object-cover animate-float-soft" loading="lazy"
+                            onerror="this.src='data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 120 120%22><defs><linearGradient id=%22g%22 x1=%220%22 y1=%220%22 x2=%22100%25%22 y2=%22100%25%22><stop offset=%220%22 stop-color=%22%23bae0ff%22/><stop offset=%22100%22 stop-color=%22%23a855f7%22/></linearGradient></defs><rect width=%22120%22 height=%22120%22 fill=%22url(%23g)%22/><circle cx=%2260%22 cy=%2248%22 r=%2218%22 fill=%22white%22 opacity=%22.9%22/><path d=%22M30 100 Q60 72 90 100 Z%22 fill=%22white%22 opacity=%22.9%22/></svg>'" />
+                    </div>
+                    <!-- 在线状态点 -->
+                    <span
+                        class="absolute bottom-1 right-1 w-4 h-4 rounded-full bg-emerald-500 ring-2 ring-white dark:ring-slate-700 animate-pulse"
+                        title="在线"></span>
+                </div>
+
+                <!-- 姓名、身份 -->
+                <div class="text-center sm:text-left flex-1">
+                    <h1 class="text-3xl sm:text-4xl font-bold tracking-tight">
+                        <span class="gradient-text">杨 可 祎</span>
+                    </h1>
+                    <p class="mt-1 text-base text-slate-500 dark:text-slate-400">
+                        前端开发工程师 · UI 设计爱好者
+                    </p>
+                    <p class="mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-300">
+                        热爱把想法变成可交互的作品。专注于 Web 前端与视觉体验，相信「简洁即力量」。
+                    </p>
+                </div>
+            </div>
+
+            <!-- 分隔线 -->
+            <div
+                class="my-7 h-px bg-gradient-to-r from-transparent via-slate-300/70 dark:via-slate-600/60 to-transparent">
+            </div>
+
+            <!-- 技能标签 -->
+            <div>
+                <h2 class="text-xs font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-500 mb-3">
+                    Skills · 技能</h2>
+                <div class="flex flex-wrap gap-2">
+                    <!-- 每个标签有不同配色 -->
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300">HTML5</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">JavaScript</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-cyan-100 text-cyan-700 dark:bg-cyan-900/50 dark:text-cyan-300">TypeScript</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300">React</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-violet-100 text-violet-700 dark:bg-violet-900/50 dark:text-violet-300">Vue</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-pink-100 text-pink-700 dark:bg-pink-900/50 dark:text-pink-300">Tailwind
+                        CSS</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700 dark:bg-emerald-900/50 dark:text-emerald-300">Node.js</span>
+                    <span
+                        class="px-3 py-1 rounded-full text-xs font-medium bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-300">Figma</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ 联系方式卡片 ============ -->
+        <section class="mt-6 glass rounded-2xl
+             bg-white/70 dark:bg-slate-800/50
+             ring-1 ring-slate-200/70 dark:ring-slate-700/60
+             shadow-lg shadow-slate-900/5
+             p-5 animate-fade-up" style="animation-delay:.12s">
+            <h2 class="text-xs font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-500 mb-4">Contact
+                · 联系方式</h2>
+
+            <!-- 邮箱 -->
+            <button class="contact-btn w-full group flex items-center justify-between gap-3 p-3 rounded-xl
+               hover:bg-brand-50 dark:hover:bg-slate-700/60
+               transition-colors" data-copy-id="email" data-copy-value="570310269@qq.com">
+                <span class="flex items-center gap-3">
+                    <span
+                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2" class="w-4 h-4">
+                            <rect x="3" y="5" width="18" height="14" rx="2" />
+                            <path d="m3 7 9 6 9-6" />
+                        </svg>
+                    </span>
+                    <span class="flex flex-col items-start">
+                        <span class="text-xs text-slate-400 dark:text-slate-500">Email</span>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">570310269@qq.com</span>
+                    </span>
+                </span>
+                <span class="text-xs text-brand-500 opacity-0 group-hover:opacity-100 transition-opacity">点击复制</span>
+            </button>
+
+            <!-- 微信 -->
+            <button class="contact-btn w-full group flex items-center justify-between gap-3 p-3 mt-1 rounded-xl
+               hover:bg-emerald-50 dark:hover:bg-slate-700/60
+               transition-colors" data-copy-id="wechat" data-copy-value="DKMK_6682">
+                <span class="flex items-center gap-3">
+                    <span
+                        class="w-9 h-9 rounded-lg bg-gradient-to-br from-emerald-400 to-emerald-600 flex items-center justify-center text-white shadow-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-4 h-4">
+                            <path
+                                d="M8.691 2C4.991 2 2 4.526 2 7.637c0 1.76 1 3.363 2.566 4.463L4 14.5l2.602-1.288c.665.183 1.369.282 2.089.282a6.4 6.4 0 0 1-.146-1.285c0-3.34 3.105-6.051 6.94-6.051.174 0 .347.009.518.025C15.598 3.99 12.459 2 8.691 2zM6.451 6.605a.864.864 0 1 1 0 1.727.864.864 0 0 1 0-1.727zm4.48 0a.864.864 0 1 1 0 1.727.864.864 0 0 1 0-1.727zm11.06 7.554c0-2.866-2.833-5.191-6.316-5.191-3.483 0-6.316 2.325-6.316 5.191s2.833 5.19 6.316 5.19c.736 0 1.442-.104 2.092-.296L20 19.5l-.532-1.843c1.553-1.081 2.523-2.643 2.523-4.498zm-8.526-1.707a.72.72 0 1 1 0-1.441.72.72 0 0 1 0 1.441zm4.42 0a.72.72 0 1 1 0-1.441.72.72 0 0 1 0 1.441z" />
+                        </svg>
+                    </span>
+                    <span class="flex flex-col items-start">
+                        <span class="text-xs text-slate-400 dark:text-slate-500">WeChat</span>
+                        <span class="text-sm font-medium text-slate-700 dark:text-slate-200">DKMK_6682</span>
+                    </span>
+                </span>
+                <span class="text-xs text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity">点击复制</span>
+            </button>
+        </section>
+
+        <!-- ============ 二维码 + 统计（并排，移动端堆叠） ============ -->
+        <section class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-6 animate-fade-up" style="animation-delay:.24s">
+            <!-- 二维码：分享本页 -->
+            <div class="glass rounded-2xl
+               bg-white/70 dark:bg-slate-800/50
+               ring-1 ring-slate-200/70 dark:ring-slate-700/60
+               shadow-lg shadow-slate-900/5
+               p-5 flex flex-col items-center">
+                <h2
+                    class="w-full text-xs font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-500 mb-3 text-left">
+                    QR · 扫码分享</h2>
+                <!-- 用户自定义的微信二维码图片 -->
+                <div class="bg-white p-3 rounded-xl shadow-inner ring-1 ring-slate-200/60">
+                    <img src="qrcode.png" alt="微信二维码" class="w-[150px] h-[150px] object-contain" />
+                </div>
+                <p class="mt-3 text-xs text-slate-500 dark:text-slate-400 text-center">扫一扫，把我的名片带走 ✨</p>
+            </div>
+
+            <!-- 模拟访问统计 -->
+            <div class="glass rounded-2xl
+               bg-white/70 dark:bg-slate-800/50
+               ring-1 ring-slate-200/70 dark:ring-slate-700/60
+               shadow-lg shadow-slate-900/5
+               p-5">
+                <h2 class="text-xs font-semibold tracking-widest uppercase text-slate-400 dark:text-slate-500 mb-4">
+                    Analytics · 访问统计</h2>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <!-- 总访问 -->
+                    <div
+                        class="rounded-xl p-3 bg-gradient-to-br from-brand-50 to-white dark:from-slate-700/50 dark:to-slate-800/0 ring-1 ring-brand-100 dark:ring-slate-600/40">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400">总访问</div>
+                        <div id="statTotal" class="mt-1 text-2xl font-bold text-brand-500">0</div>
+                    </div>
+                    <!-- 今日 -->
+                    <div
+                        class="rounded-xl p-3 bg-gradient-to-br from-emerald-50 to-white dark:from-slate-700/50 dark:to-slate-800/0 ring-1 ring-emerald-100 dark:ring-slate-600/40">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400">今日</div>
+                        <div id="statToday" class="mt-1 text-2xl font-bold text-emerald-500">0</div>
+                    </div>
+                    <!-- 来自微信 -->
+                    <div
+                        class="rounded-xl p-3 bg-gradient-to-br from-violet-50 to-white dark:from-slate-700/50 dark:to-slate-800/0 ring-1 ring-violet-100 dark:ring-slate-600/40">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400">微信</div>
+                        <div id="statWechat" class="mt-1 text-2xl font-bold text-violet-500">0</div>
+                    </div>
+                    <!-- 复制次数 -->
+                    <div
+                        class="rounded-xl p-3 bg-gradient-to-br from-amber-50 to-white dark:from-slate-700/50 dark:to-slate-800/0 ring-1 ring-amber-100 dark:ring-slate-600/40">
+                        <div class="text-[11px] text-slate-500 dark:text-slate-400">复制</div>
+                        <div id="statCopy" class="mt-1 text-2xl font-bold text-amber-500">0</div>
+                    </div>
+                </div>
+
+                <!-- 小提示 + 重置按钮 -->
+                <div class="mt-4 flex items-center justify-between text-[11px] text-slate-400 dark:text-slate-500">
+                    <span>数据保存在本机 · LocalStorage</span>
+                    <button id="resetStats"
+                        class="hover:text-rose-500 transition-colors underline underline-offset-2">重置</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- ============ 页脚 ============ -->
+        <footer class="mt-10 text-center text-xs text-slate-400 dark:text-slate-500 animate-fade-up"
+            style="animation-delay:.36s">
+            © <span id="year"></span> 杨可祎 · 用 ❤️ 打造的数字名片
+        </footer>
+    </main>
+
+    <!-- ==================== Toast 提示 ==================== -->
+    <div id="toast" role="status" aria-live="polite" class="toast fixed bottom-8 left-1/2 -translate-x-1/2 z-50
+           px-4 py-2 rounded-full text-sm font-medium
+           bg-slate-900 text-white dark:bg-white dark:text-slate-900
+           shadow-xl shadow-slate-900/20"></div>
+
+    <!-- ============================================================
+       JAVASCRIPT：主题、统计、复制
+       ============================================================ -->
+    <script>
+            (function () {
+                'use strict';
+
+                /* ========================================================
+                 * 1. 主题切换（深色 / 浅色）
+                 *    - 优先级：localStorage > 系统偏好
+                 *    - 切换时写入 <html class="dark"> 并持久化
+                 * ====================================================== */
+                const THEME_KEY = 'card.theme';
+                const html = document.documentElement;
+
+                function applyTheme(isDark) {
+                    html.classList.toggle('dark', isDark);
+                }
+
+                function initTheme() {
+                    const saved = localStorage.getItem(THEME_KEY);
+                    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                    const isDark = saved !== null ? saved === 'dark' : prefersDark;
+                    applyTheme(isDark);
+                }
+
+                function toggleTheme() {
+                    const isDark = !html.classList.contains('dark');
+                    applyTheme(isDark);
+                    localStorage.setItem(THEME_KEY, isDark ? 'dark' : 'light');
+                }
+
+                document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+                /* ========================================================
+                 * 2. 模拟访问浏览统计（localStorage）
+                 *    - total: 累计访问次数
+                 *    - today: 今日访问次数（按日期重置）
+                 *    - wechat: 来自微信（通过 UA 或 ?from=wechat）
+                 *    - copy: 复制联系方式次数
+                 * ====================================================== */
+                const STATS_KEY = 'card.stats';
+
+                function todayStr() {
+                    const d = new Date();
+                    return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+                }
+
+                function loadStats() {
+                    try {
+                        const raw = localStorage.getItem(STATS_KEY);
+                        return raw ? JSON.parse(raw) : null;
+                    } catch { return null; }
+                }
+
+                function saveStats(s) {
+                    localStorage.setItem(STATS_KEY, JSON.stringify(s));
+                }
+
+                function initStats() {
+                    let stats = loadStats();
+                    const today = todayStr();
+
+                    if (!stats) {
+                        // 首次访问：初始化，总访问给个好看的起点
+                        stats = { total: 137, today: 1, todayDate: today, wechat: 42, copy: 8 };
+                    } else {
+                        // 每次打开都 +1
+                        stats.total = (stats.total || 0) + 1;
+
+                        // 今日：如果日期变了，重置
+                        if (stats.todayDate !== today) {
+                            stats.todayDate = today;
+                            stats.today = 1;
+                        } else {
+                            stats.today = (stats.today || 0) + 1;
+                        }
+
+                        // 检测是否来自微信
+                        const isWechatUA = /micromessenger/i.test(navigator.userAgent);
+                        const fromQuery = /[?&]from=wechat/i.test(location.search);
+                        if (isWechatUA || fromQuery) {
+                            stats.wechat = (stats.wechat || 0) + 1;
+                        }
+                    }
+
+                    saveStats(stats);
+                    renderStats(stats);
+                }
+
+                function renderStats(s) {
+                    document.getElementById('statTotal').textContent = (s.total || 0).toLocaleString();
+                    document.getElementById('statToday').textContent = (s.today || 0).toLocaleString();
+                    document.getElementById('statWechat').textContent = (s.wechat || 0).toLocaleString();
+                    document.getElementById('statCopy').textContent = (s.copy || 0).toLocaleString();
+                }
+
+                function incrementCopy() {
+                    const stats = loadStats() || { total: 0, today: 0, todayDate: todayStr(), wechat: 0, copy: 0 };
+                    stats.copy = (stats.copy || 0) + 1;
+                    saveStats(stats);
+                    renderStats(stats);
+                }
+
+                document.getElementById('resetStats').addEventListener('click', function () {
+                    if (!confirm('确定要重置所有统计数据吗？')) return;
+                    localStorage.removeItem(STATS_KEY);
+                    initStats();
+                    showToast('统计已重置');
+                });
+
+                /* ========================================================
+                 * 3. 复制到剪贴板 + Toast 提示
+                 *    - 优先 navigator.clipboard（HTTPS / 现代浏览器）
+                 *    - 降级 document.execCommand('copy')
+                 * ====================================================== */
+                const toastEl = document.getElementById('toast');
+                let toastTimer = null;
+
+                function showToast(msg) {
+                    toastEl.textContent = msg;
+                    toastEl.classList.add('show');
+                    clearTimeout(toastTimer);
+                    toastTimer = setTimeout(() => toastEl.classList.remove('show'), 1800);
+                }
+
+                async function copyText(text) {
+                    // 方案 1：现代 Clipboard API（HTTPS / 安全上下文）
+                    if (navigator.clipboard && window.isSecureContext) {
+                        try {
+                            await navigator.clipboard.writeText(text);
+                            return true;
+                        } catch (err) {
+                            // clipboard API 被拒或不可用 → 继续尝试降级方案
+                            console.warn('clipboard API 不可用，降级中：', err);
+                        }
+                    }
+                    // 方案 2：execCommand 降级（file:// 或老浏览器）
+                    try {
+                        const ta = document.createElement('textarea');
+                        ta.value = text;
+                        ta.style.position = 'fixed';
+                        ta.style.opacity = '0';
+                        ta.style.left = '-9999px';   // 某些浏览器 select() 需要可见
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        ta.setSelectionRange(0, ta.value.length);
+                        const ok = document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        return ok;
+                    } catch (err) {
+                        console.warn('execCommand copy 也失败：', err);
+                        return false;
+                    }
+                }
+
+                // 批量绑定：所有带 data-copy-value 的按钮都支持复制
+                document.querySelectorAll('[data-copy-value]').forEach(btn => {
+                    btn.addEventListener('click', async () => {
+                        const value = btn.dataset.copyValue;
+                        const label = btn.dataset.copyId === 'email' ? '邮箱' : '微信';
+                        const ok = await copyText(value);
+                        showToast(ok ? `${label}已复制：${value}` : '复制失败，请手动选择复制');
+                        if (ok) incrementCopy();
+                    });
+                });
+
+                /* ========================================================
+                 * 4. 初始化入口
+                 * ====================================================== */
+                function boot() {
+                    initTheme();   // 先初始化主题，避免闪烁
+                    initStats();
+                    document.getElementById('year').textContent = new Date().getFullYear();
+                }
+
+                // DOM 就绪后启动
+                if (document.readyState === 'loading') {
+                    document.addEventListener('DOMContentLoaded', boot);
+                } else {
+                    boot();
+                }
+            })();
+    </script>
+</body>
+
+</html>
